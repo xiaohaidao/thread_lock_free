@@ -5,10 +5,9 @@
 
 template<typename T>
 class lock_free_queue {
-private:
     struct node;
     struct counted_node_ptr {
-        int external_count;
+        intptr_t external_count;
         node* ptr;
     };
 
@@ -31,8 +30,10 @@ private:
             new_count.external_counters = 2;
             count.store(new_count);
 
-            next.ptr = nullptr;
-            next.external_count = 0;
+            counted_node_ptr next_node;
+            next_node.ptr = nullptr;
+            next_node.external_count = 0;
+            next.store(next_node);
         }
 
         void release_ref() {
@@ -70,22 +71,24 @@ private:
 
     static void free_external_counter(counted_node_ptr &old_node_ptr) {
         node* const ptr = old_node_ptr.ptr;
-        int const count_increase = old_node_ptr.external_count-2;
+        int const count_increase =
+            static_cast<int>(old_node_ptr.external_count - 2);
 
         node_counter old_counter =
             ptr->count.load(std::memory_order_relaxed);
+
         node_counter new_counter;
         do {
             new_counter = old_counter;
             --new_counter.external_counters;
             new_counter.internal_count += count_increase;
-        }
-        while(!ptr->count.compare_exchange_strong(
+        } while(!ptr->count.compare_exchange_strong(
                     old_counter, new_counter,
                     std::memory_order_acquire, std::memory_order_relaxed));
 
         if (!new_counter.internal_count &&
                 !new_counter.external_counters) {
+
             delete ptr;
         }
     }
@@ -96,6 +99,7 @@ private:
         node* const current_tail_ptr = old_tail.ptr;
         while(!tail.compare_exchange_weak(old_tail, new_tail) &&
                 old_tail.ptr == current_tail_ptr);
+
         if (old_tail.ptr == current_tail_ptr) {
             free_external_counter(old_tail);
         } else {
@@ -104,15 +108,16 @@ private:
     }
 
 public:
-    lock_free_queue() : head(new node), tail(head.load()) {}
+    lock_free_queue() : head(counted_node_ptr({1, new node})), tail(head.load()) {}
 
     lock_free_queue(const lock_free_queue& other) = delete;
-    lock_free_queue& operator = (const lock_free_queue& other) = delete;
+    lock_free_queue& operator =(const lock_free_queue& other) = delete;
 
     ~lock_free_queue() {
-        while(node* const old_head = head.load()) {
-            head.store(old_head->next);
-            delete old_head;
+        while (pop());
+        counted_node_ptr node_ptr = head.load();
+        if (node_ptr.ptr) {
+            delete node_ptr.ptr;
         }
     }
 
@@ -135,7 +140,7 @@ public:
         }
     }
 
-    void push(T new_value) {
+    void push(const T &new_value) {
         std::unique_ptr<T> new_data(new T(new_value));
         counted_node_ptr new_next;
         new_next.ptr = new node;
@@ -148,6 +153,7 @@ public:
             T* old_data = nullptr;
             if (old_tail.ptr->data.compare_exchange_strong(
                         old_data, new_data.get())) {
+
                 counted_node_ptr old_next = {0};
                 if (!old_tail.ptr->next.compare_exchange_strong(
                             old_next, new_next)) {

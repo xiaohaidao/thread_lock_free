@@ -5,10 +5,9 @@
 
 template<typename T>
 class lock_free_stack {
-private:
     struct node;
     struct counted_node_ptr {
-        int external_count;
+        intptr_t external_count;
         node* ptr;
     };
 
@@ -37,11 +36,8 @@ private:
     }
 
 public:
-    lock_free_stack(const lock_free_stack& other) = delete;
-    lock_free_stack& operator=(const lock_free_stack& other) = delete;
-
     ~lock_free_stack() {
-        while(pop());
+        while (pop());
     }
 
     void push(const T &data) {
@@ -70,7 +66,8 @@ public:
                 std::shared_ptr<T> res;
                 res.swap(ptr->data);
 
-                int const count_increase = old_head.external_count - 2;
+                int const count_increase =
+                    static_cast<int>(old_head.external_count - 2);
 
                 if (ptr->internal_count.fetch_add(count_increase,
                             std::memory_order_release) == -count_increase) {
