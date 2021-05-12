@@ -1,7 +1,12 @@
-#ifndef THREAD_NO_BLOCK_SPINLOCK_MUTEX_H
-#define THREAD_NO_BLOCK_SPINLOCK_MUTEX_H
+// Copyright (C) 2021 All rights reserved.
+// Email: oxox0@qq.com. Created in 202104
+
+#ifndef THREAD_SPINLOCK_MUTEX_H
+#define THREAD_SPINLOCK_MUTEX_H
 
 #include <thread>
+
+namespace thread {
 
 class spinlock_mutex {
     std::atomic_flag flag;
@@ -17,5 +22,7 @@ public:
     }
 };
 
-#endif // THREAD_NO_BLOCK_SPINLOCK_MUTEX_H
+} // namespace thread
+
+#endif // THREAD_SPINLOCK_MUTEX_H
 

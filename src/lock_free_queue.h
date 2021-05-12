@@ -1,7 +1,12 @@
-#ifndef LOCK_FREE_QUEUE_H
-#define LOCK_FREE_QUEUE_H
+// Copyright (C) 2021 All rights reserved.
+// Email: oxox0@qq.com. Created in 202104
+
+#ifndef THREAD_LOCK_FREE_QUEUE_H
+#define THREAD_LOCK_FREE_QUEUE_H
 
 #include <atomic>
+
+namespace thread {
 
 template<typename T>
 class lock_free_queue {
@@ -178,4 +183,6 @@ public:
     }
 };
 
-#endif // LOCK_FREE_QUEUE_H
+} // namespace thread
+
+#endif // THREAD_LOCK_FREE_QUEUE_H
