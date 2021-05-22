@@ -15,7 +15,7 @@ void thread_func(thread::lock_free_queue<int> &queue, size_t id) {
 TEST_CASE("Lock Free Queue Function", "[LockFreeQueueFunction]") {
     thread::lock_free_queue<int> queue;
 
-    size_t thread_size = 10;
+    size_t thread_size = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
     for (size_t i = 0; i < thread_size; ++i) {
         threads.push_back(std::thread(thread_func, std::ref(queue), i));

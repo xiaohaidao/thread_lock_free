@@ -41,6 +41,7 @@ class lock_free_stack {
     }
 
 public:
+    lock_free_stack(): head({1, nullptr}) {}
     ~lock_free_stack() {
         while (pop());
     }
