@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lock_free_stack.h"
 
-void thread_func(lock_free_stack<int> &stack, size_t id) {
+void thread_func(thread::lock_free_stack<int> &stack, size_t id) {
     static const int LOOP_SIZE = 1000;
     for (size_t i = 0; i < LOOP_SIZE; ++i) {
         int v = (int)((id + 1) * LOOP_SIZE + i);
@@ -14,7 +14,7 @@ void thread_func(lock_free_stack<int> &stack, size_t id) {
 
 TEST_CASE("Lock Free Stack Function", "[LockFreeStackFunction]") {
 
-    lock_free_stack<int> stack;
+    thread::lock_free_stack<int> stack;
 
     size_t thread_size = 10;
     //size_t thread_size = std::thread::hardware_concurrency();

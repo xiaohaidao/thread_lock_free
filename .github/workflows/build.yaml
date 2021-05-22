@@ -1,0 +1,9 @@
+name: build action
+on: [push]
+jobs: 
+  build-test:
+    run-on: ubuntu-latest
+    step: 
+      - run: echo building before
+        uses: actions/checkout@2
+      - run: mkdir build && cd build && cmake .. && make
