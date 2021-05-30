@@ -11,5 +11,8 @@ jobs:
       - name: test
         run: |
             ctest --test-dir ${{github.workspace}}/build --rerun-failed --output-on-failure
-            #valgrind --tool=memcheck ./${{github.workspace}}/build/test/lock_free_test1
+      - name: valgrind
+        run: |
+            sudo apt-get install -y valgrind
+            valgrind --tool=memcheck -v --leak-check=full --show-leak-kinds=all ${{github.workspace}}/build/tests/lock_free_test1
 
