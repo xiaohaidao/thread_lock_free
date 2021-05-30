@@ -30,6 +30,7 @@ class lock_free_queue {
         std::atomic<counted_node_ptr> next;
 
         node() {
+            data = nullptr;
             node_counter new_count;
             new_count.internal_count = 0;
             new_count.external_counters = 2;

@@ -1,9 +1,18 @@
 name: build action
 on: [push]
-jobs: 
+jobs:
   build-test:
-    run-on: ubuntu-latest
-    step: 
-      - run: echo building before
-        uses: actions/checkout@2
-      - run: mkdir build && cd build && cmake .. && make
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: build
+        run: cmake -B ${{github.workspace}}/build && cmake --build ${{github.workspace}}/build
+      - name: test
+        run: |
+            ctest --test-dir ${{github.workspace}}/build --rerun-failed --output-on-failure
+      - name: valgrind
+        run: |
+            sudo apt-get install -y valgrind
+            valgrind --tool=memcheck -v --leak-check=full --show-leak-kinds=all ${{github.workspace}}/build/tests/lock_free_test1
+

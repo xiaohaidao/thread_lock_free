@@ -8,5 +8,9 @@ add_executable(lock_free_test1
     main.cpp
     )
 
+if(UNIX OR MINGW)
+target_link_libraries(lock_free_test1 atomic pthread)
+endif()
+
 add_test(NAME lock_free_test1
     COMMAND $<TARGET_FILE:lock_free_test1>)
