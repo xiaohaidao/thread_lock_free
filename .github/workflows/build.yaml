@@ -6,6 +6,8 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
+        with:
+          submodules: 'true'
       - name: build
         run: cmake -B ${{github.workspace}}/build && cmake --build ${{github.workspace}}/build
       - name: test

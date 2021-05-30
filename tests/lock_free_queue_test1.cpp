@@ -1,7 +1,7 @@
 #include <set>
 #include <thread>
 
-#include "catch.hpp"
+#include "gtest/gtest.h"
 #include "lock_free_queue.h"
 
 void thread_func(thread::lock_free_queue<int> &queue, size_t id) {
@@ -12,7 +12,7 @@ void thread_func(thread::lock_free_queue<int> &queue, size_t id) {
     }
 }
 
-TEST_CASE("Lock Free Queue Function", "[LockFreeQueueFunction]") {
+TEST(LockFreeQueue, LockFreeQueueFunction1) {
     thread::lock_free_queue<int> queue;
 
     size_t thread_size = std::thread::hardware_concurrency();
@@ -27,7 +27,7 @@ TEST_CASE("Lock Free Queue Function", "[LockFreeQueueFunction]") {
 
     std::set<int> result;
     while (auto v = queue.pop()) {
-      REQUIRE(result.find(*v) == result.end());
+      ASSERT_TRUE(result.find(*v) == result.end());
       result.insert(*v);
     }
 }

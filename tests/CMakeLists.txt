@@ -8,6 +8,7 @@ add_executable(lock_free_test1
     main.cpp
     )
 
+target_link_libraries(lock_free_test1 gtest_main)
 if(UNIX OR MINGW)
 target_link_libraries(lock_free_test1 atomic pthread)
 endif()

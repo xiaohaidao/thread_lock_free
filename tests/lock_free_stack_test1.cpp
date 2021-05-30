@@ -1,7 +1,7 @@
 #include <set>
 #include <thread>
 
-#include "catch.hpp"
+#include "gtest/gtest.h"
 #include "lock_free_stack.h"
 
 void thread_func(thread::lock_free_stack<int> &stack, size_t id) {
@@ -12,7 +12,7 @@ void thread_func(thread::lock_free_stack<int> &stack, size_t id) {
     }
 }
 
-TEST_CASE("Lock Free Stack Function", "[LockFreeStackFunction]") {
+TEST(LockFreeStack, LockFreeStackFunction1) {
 
     thread::lock_free_stack<int> stack;
 
@@ -28,7 +28,7 @@ TEST_CASE("Lock Free Stack Function", "[LockFreeStackFunction]") {
 
     std::set<int> result;
     while (auto v = stack.pop()) {
-      REQUIRE(result.find(*v) == result.end());
+      ASSERT_TRUE(result.find(*v) == result.end());
       result.insert(*v);
     }
 }
