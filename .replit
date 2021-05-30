@@ -1,2 +1,2 @@
 language = "cpp"
-run = "cmake -B build && cmake --build build"
+run = "mkdir -p build && cd build && cmake .. && make && make test && valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all ./tests/lock_free_test1"
