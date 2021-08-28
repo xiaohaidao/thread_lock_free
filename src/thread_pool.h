@@ -139,7 +139,7 @@ public:
                 queues.push_bask(std::unique_ptr<work_stealing_queue>(
                             new work_stealing_queue));
 
-                threads.push_back(std::thread(&thrad_pool::worker_thread,
+                threads.push_back(std::thread(&thrad_pool::work_thread,
                             this, i));
             }
         } catch (...) {

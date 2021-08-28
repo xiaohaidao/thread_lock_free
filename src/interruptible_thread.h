@@ -4,16 +4,25 @@
 #ifndef THREAD_INTERRUPTIBLE_THREAD_H
 #define THREAD_INTERRUPTIBLE_THREAD_H
 
+#include <atomic>
+#include <condition_variable>
+#include <future>
+#include <mutex>
+#include <stdexcept>
+#include <thread>
+
 namespace thread {
+void interruption_point();
+
 namespace impl {
 
-class interrput_flag {
+class interrupt_flag {
     std::atomic<bool> flag;
     std::condition_variable *thread_cond;
     std::condition_variable_any *thread_cond_any;
     std::mutex set_clear_mutex;
 public:
-    interrupt_flag(): thread_cond(0), thread_cond_any(0) {}
+    interrupt_flag(): flag(false), thread_cond(0), thread_cond_any(0) {}
     void set() {
         flag.store(true, std::memory_order_relaxed);
         std::lock_guard<std::mutex> lk(set_clear_mutex);
@@ -57,7 +66,7 @@ public:
             }
 
             void lock() {
-                std::lock(self_->set_clear.mutex, lk);
+                std::lock(self_->set_clear_mutex, lk_);
             }
 
             ~custom_lock() {
@@ -66,7 +75,7 @@ public:
             }
         };
         custom_lock cl(this, cv, lk);
-        interruptino_point();
+        interruption_point();
         cv.wait(cl);
         interruption_point();
     }
@@ -74,9 +83,12 @@ public:
 
 thread_local interrupt_flag this_thread_interrupt_flag;
 
+} // namespace impl
+
 void interruption_point() {
-    if (this_thread_interrupt_flag.is_set()) {
-        throw thread_intterrupted();
+    if (impl::this_thread_interrupt_flag.is_set()) {
+        // throw thread_intterrupted();
+        throw std::runtime_error("thread_intterrupted");
     }
 }
 
@@ -84,31 +96,42 @@ template<typename Lockable>
 void interruptible_wait(std::condition_variable_any& cv,
         Lockable& lk) {
 
-  this_thread_interrupt_flag.wait(cv,lk);
+    impl::this_thread_interrupt_flag.wait(cv,lk);
 }
 
-} // namespace impl
+template<typename T>
+void interruptible_wait(std::future<T> &uf) {
+    while (!impl::this_thread_interrupt_flag.is_set()) {
+        if (std::future_status::ready == 
+            uf.wait_for(std::chrono::milliseconds(1))) {
 
+            break;
+        }
+    }
+    interruption_point();
+}
+
+template<typename FunctionType>
 class interruptible_thread {
     std::thread internal_thread;
-    impt::interrupt_flag *flag;
+    impl::interrupt_flag *flag;
 public:
-    template<typename FunctinoType>
     interruptible_thread(FunctionType f) {
-        std::promise<impt::interrupt_flag *> p;
+        std::promise<impl::interrupt_flag *> p;
         internal_thread = std::thread([f, &p] {
-                p.set_value(&impt::this_thread_interrupt_flag);
+                p.set_value(&impl::this_thread_interrupt_flag);
                 try {
                     f();
-                } catch (thread_interrupted const &) {
+                } catch (std::exception const &) {
 
                 }
                 });
         flag = p.get_future().get();
     }
-    void join();
-    void detach();
-    bool joinable() const;
+
+    void join() { internal_thread.join(); }
+    void detach() { internal_thread.detach(); }
+    bool joinable() const { internal_thread.joinable(); }
     void interrupt() {
         if (flag) {
             flag->set();
