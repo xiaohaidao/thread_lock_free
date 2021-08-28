@@ -4,6 +4,8 @@
 #ifndef THREAD_THREAD_QUICK_SORT_H
 #define THREAD_THREAD_QUICK_SORT_H
 
+#include <list>
+
 #include "thread_pool.h"
 
 namespace thread {
@@ -33,8 +35,7 @@ struct sorter {
 
         std::list<T> new_higher(do_sort(chunk_data));
         result.splice(result.end(), new_higher);
-        while(!new_lower.wait_for(std::chrono::seconds(0)) ==
-                std::future_status::timeout) {
+        while (std::future_status::timeout == new_lower.wait_for(std::chrono::seconds(0))) {
 
             pool.run_pending_task();
         }

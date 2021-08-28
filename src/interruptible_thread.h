@@ -81,11 +81,11 @@ public:
     }
 };
 
-thread_local interrupt_flag this_thread_interrupt_flag;
+static thread_local interrupt_flag this_thread_interrupt_flag;
 
 } // namespace impl
 
-void interruption_point() {
+inline void interruption_point() {
     if (impl::this_thread_interrupt_flag.is_set()) {
         // throw thread_intterrupted();
         throw std::runtime_error("thread_intterrupted");

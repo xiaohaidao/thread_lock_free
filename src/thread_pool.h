@@ -4,7 +4,11 @@
 #ifndef THREAD_THREAD_POOL_H
 #define THREAD_THREAD_POOL_H
 
+#include <deque>
+#include <future>
 #include <thread>
+
+#include "threadsafe_queue.h"
 
 namespace thread {
 
@@ -82,13 +86,13 @@ class thread_pool {
     typedef function_wrapper task_type;
 
     std::atomic_bool done;
-    lock_free_queue<task_type> pool_work_queue;
+    threadsafe_queue<task_type> pool_work_queue;
     std::vector<std::unique_ptr<work_stealing_queue> > queues;
     std::vector<std::thread> threads;
     //join_threads joiner;
 
     static thread_local work_stealing_queue *local_work_queue;
-    static thread_local uint32_t my_index;
+    static thread_local size_t my_index;
 
     void work_thread(uint32_t index) {
         my_index = index;
@@ -102,21 +106,55 @@ class thread_pool {
         return local_work_queue && local_work_queue->try_pop(task);
     }
     bool pop_task_from_pool_queue(task_type &task) {
-        auto t = pool_work_queue.pop();
-        if (t) {
-            task = *t;
-        }
-        return t;
+        return pool_work_queue.try_pop(task);
     }
     bool pop_task_from_other_thread_queue(task_type &task) {
         size_t queues_size = queues.size();
         for (size_t i = 0; i < queues_size; ++i) {
             size_t index = (my_index + i + 1) % queues_size;
-            if (queues[index]->try_streal(task)) {
+            if (queues[index]->try_steal(task)) {
                 return true;
             }
         }
         return false;
+    }
+
+public:
+    thread_pool(): done(false) {
+        uint32_t const thread_count = std::thread::hardware_concurrency();
+        try {
+            for (uint32_t i = 0; i < thread_count; ++i) {
+                queues.push_back(std::unique_ptr<work_stealing_queue>(
+                            new work_stealing_queue));
+
+                threads.push_back(std::thread(&thread_pool::work_thread,
+                            this, i));
+            }
+        } catch (...) {
+            done = true;
+            throw;
+        }
+    }
+    ~thread_pool() {
+        done = true;
+        for (auto &i: threads) {
+          i.join();
+        }
+    }
+
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type>
+    submit(FunctionType f) {
+        typedef typename std::result_of<FunctionType()>::type result_type;
+
+        std::packaged_task<result_type()> task(std::move(f));
+        std::future<result_type> res(task.get_future());
+        if (local_work_queue) {
+            local_work_queue->push(std::move(task));
+        } else {
+            pool_work_queue.push(std::move(task));
+        }
+        return res;
     }
 
     void run_pending_task() {
@@ -131,41 +169,11 @@ class thread_pool {
         }
     }
 
-public:
-    thread_pool(): done(false) {
-        uint32_t const thread_count = std::thread::hardware_concurrency();
-        try {
-            for (uint32_t i = 0; i < thread_count; ++i) {
-                queues.push_bask(std::unique_ptr<work_stealing_queue>(
-                            new work_stealing_queue));
-
-                threads.push_back(std::thread(&thrad_pool::work_thread,
-                            this, i));
-            }
-        } catch (...) {
-            done = true;
-            throw;
-        }
-    }
-    ~thread_pool() {
-        done = true;
-    }
-
-    template<typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type>
-    submit(FunctionType f) {
-        typedef typename std::result_of<FunctionType()>::type result_type;
-
-        std::package_task<result_type()> task(std::move(f));
-        std::future<result_type> res(task.get_future());
-        if (local_work_queue) {
-            local_work_queue->push(std::move(task));
-        } else {
-            pool_work_queue.push(std::move(task));
-        }
-        return res;
-    }
 };
+thread_local thread_pool::work_stealing_queue *
+thread_pool::local_work_queue = nullptr;
+
+thread_local size_t thread_pool::my_index = 0;
 
 } // namespace thread
 
