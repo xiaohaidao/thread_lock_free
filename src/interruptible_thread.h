@@ -111,12 +111,12 @@ void interruptible_wait(std::future<T> &uf) {
     interruption_point();
 }
 
-template<typename FunctionType>
 class interruptible_thread {
     std::thread internal_thread;
     impl::interrupt_flag *flag;
 public:
-    interruptible_thread(FunctionType f) {
+    template<typename FunctionType>
+    explicit interruptible_thread(FunctionType f) {
         std::promise<impl::interrupt_flag *> p;
         internal_thread = std::thread([f, &p] {
                 p.set_value(&impl::this_thread_interrupt_flag);
@@ -131,7 +131,7 @@ public:
 
     void join() { internal_thread.join(); }
     void detach() { internal_thread.detach(); }
-    bool joinable() const { internal_thread.joinable(); }
+    bool joinable() const { return internal_thread.joinable(); }
     void interrupt() {
         if (flag) {
             flag->set();
