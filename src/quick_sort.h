@@ -4,6 +4,7 @@
 #ifndef THREAD_THREAD_QUICK_SORT_H
 #define THREAD_THREAD_QUICK_SORT_H
 
+#include <algorithm>
 #include <list>
 
 #include "thread_pool.h"
